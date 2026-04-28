@@ -1,0 +1,45 @@
+{
+  "name": "firth",
+  "version": "0.0.1",
+  "description": "Cloud platform SDK for AI coding agents — scaffold, deploy, and operate cloud stacks alongside your AI coding agent.",
+  "type": "module",
+  "bin": {
+    "firth": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "dev": "tsx src/cli.ts",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "cli",
+    "ai-agent",
+    "deploy",
+    "scaffold",
+    "vercel",
+    "railway",
+    "neon",
+    "firth"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.7.0",
+    "citty": "^0.1.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsup": "^8.0.2",
+    "tsx": "^4.7.1",
+    "typescript": "^5.4.0",
+    "vitest": "^1.4.0"
+  }
+}
