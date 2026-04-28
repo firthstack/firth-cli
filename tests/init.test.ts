@@ -2,13 +2,9 @@ import { describe, it, expect } from "vitest";
 import { initCommand } from "../src/commands/init.js";
 
 describe("init command", () => {
-  it("exposes citty meta with name 'init'", () => {
+  it("exposes citty meta with name 'init'", async () => {
     expect(initCommand.meta).toBeDefined();
-    // citty's meta can be a function or object; here it is an object literal.
-    const meta =
-      typeof initCommand.meta === "function"
-        ? initCommand.meta()
-        : initCommand.meta;
+    const meta = await initCommand.meta;
     expect(meta?.name).toBe("init");
   });
 
