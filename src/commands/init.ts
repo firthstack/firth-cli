@@ -3,12 +3,20 @@ import * as p from "@clack/prompts";
 import { writeFile, mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { resolve, basename } from "node:path";
+import { spawn } from "node:child_process";
 import type {
   FirthConfig,
   FirthLock,
   StackChoices,
   BackendFramework,
 } from "../schema.js";
+
+export interface InstallCommand {
+  cmd: string;
+  args: string[];
+  cwd?: string;
+  description: string;
+}
 
 export const initCommand = defineCommand({
   meta: {
@@ -49,6 +57,12 @@ export const initCommand = defineCommand({
     "backend-host": {
       type: "string",
       description: "Backend host override (railway | none)",
+    },
+    "skip-install": {
+      type: "boolean",
+      description:
+        "Skip installing host skills (npx skills add ...) and host CLIs (npm i -g ...). Useful in CI or when running offline.",
+      default: false,
     },
   },
   async run({ args }) {
@@ -94,13 +108,31 @@ export const initCommand = defineCommand({
       "utf8",
     );
 
+    const skipInstall = !!args["skip-install"];
+    const installResult = skipInstall
+      ? { ran: false, commands: buildInstallCommands(stack, targetDir) }
+      : await runInstalls(stack, targetDir, !!args.yes);
+
     p.outro(
       [
         `OK: wrote firth.config.ts and firth.lock.json to ${targetDir}`,
         "",
         "NEXT STEPS:",
         "  1. Review firth.config.ts and adjust the stack if needed.",
-        "  2. Run `firth deploy` to provision and ship (coming soon).",
+        ...(installResult.ran
+          ? []
+          : installResult.commands.length > 0
+            ? [
+                "  2. Install host skills + CLIs (skipped this run):",
+                ...installResult.commands.map(
+                  (c) => `       ${c.cmd} ${c.args.join(" ")}`,
+                ),
+                "  3. Run `firth deploy` to provision and ship (coming soon).",
+              ]
+            : []),
+        ...(installResult.ran
+          ? ["  2. Run `firth deploy` to provision and ship (coming soon)."]
+          : []),
       ].join("\n"),
     );
   },
@@ -191,6 +223,153 @@ async function promptStack(
     frontendHost: String(frontendHost) as StackChoices["frontendHost"],
     backendHost: backendHost as StackChoices["backendHost"],
   };
+}
+
+/**
+ * Build the list of skill + CLI install commands implied by the stack choices.
+ * Pure: no I/O. Exported so tests can pin the exact command shapes.
+ */
+export function buildInstallCommands(
+  stack: StackChoices,
+  targetDir: string,
+): InstallCommand[] {
+  const cmds: InstallCommand[] = [];
+
+  if (stack.frontendHost === "vercel") {
+    cmds.push(
+      {
+        cmd: "npx",
+        args: [
+          "-y",
+          "skills",
+          "add",
+          "vercel-labs/next-skills",
+          "--skill",
+          "next-best-practices",
+          "--skill",
+          "next-cache-components",
+          "--skill",
+          "next-upgrade",
+        ],
+        cwd: targetDir,
+        description: "Next.js skills (vercel-labs/next-skills)",
+      },
+      {
+        cmd: "npx",
+        args: ["-y", "skills", "add", "vercel/vercel", "--skill", "vercel-cli"],
+        cwd: targetDir,
+        description: "Vercel CLI skill (vercel/vercel)",
+      },
+      {
+        cmd: "npx",
+        args: [
+          "-y",
+          "skills",
+          "add",
+          "vercel-labs/agent-skills",
+          "--skill",
+          "vercel-deploy",
+        ],
+        cwd: targetDir,
+        description: "Vercel deploy skill (vercel-labs/agent-skills)",
+      },
+      {
+        cmd: "npx",
+        args: [
+          "-y",
+          "skills",
+          "add",
+          "vercel-labs/autoship",
+          "--skill",
+          "autoship",
+        ],
+        cwd: targetDir,
+        description: "Autoship skill (vercel-labs/autoship)",
+      },
+      {
+        cmd: "npm",
+        args: ["i", "-g", "vercel"],
+        description: "Vercel CLI (global)",
+      },
+    );
+  }
+
+  if (stack.backendHost === "railway") {
+    cmds.push(
+      {
+        cmd: "npx",
+        args: ["-y", "skills", "add", "railwayapp/railway-skills"],
+        cwd: targetDir,
+        description: "Railway skills (railwayapp/railway-skills)",
+      },
+      {
+        cmd: "npm",
+        args: ["i", "-g", "@railway/cli"],
+        description: "Railway CLI (global)",
+      },
+    );
+  }
+
+  return cmds;
+}
+
+interface InstallOutcome {
+  ran: boolean;
+  commands: InstallCommand[];
+}
+
+async function runInstalls(
+  stack: StackChoices,
+  targetDir: string,
+  yes: boolean,
+): Promise<InstallOutcome> {
+  const cmds = buildInstallCommands(stack, targetDir);
+  if (cmds.length === 0) return { ran: true, commands: [] };
+
+  p.log.info(
+    [
+      "Will install host skills + CLIs:",
+      ...cmds.map((c) => `  - ${c.description}`),
+      "",
+      "Note: `npm i -g ...` may require admin/sudo on system Node installs.",
+    ].join("\n"),
+  );
+
+  if (!yes) {
+    const proceed = await p.confirm({
+      message: "Run install now?",
+      initialValue: true,
+    });
+    if (p.isCancel(proceed) || !proceed) {
+      return { ran: false, commands: cmds };
+    }
+  }
+
+  for (const c of cmds) {
+    p.log.step(`$ ${c.cmd} ${c.args.join(" ")}`);
+    const result = await runCmd(c);
+    if (!result.ok) {
+      p.log.warn(
+        `FAILED (exit ${result.code ?? "?"}): ${c.description}. Continuing.`,
+      );
+    }
+  }
+
+  return { ran: true, commands: cmds };
+}
+
+function runCmd(
+  c: InstallCommand,
+): Promise<{ ok: boolean; code: number | null }> {
+  return new Promise((done) => {
+    const child = spawn(c.cmd, c.args, {
+      cwd: c.cwd,
+      stdio: "inherit",
+      shell: true,
+    });
+    child.on("close", (code) => done({ ok: code === 0, code }));
+    child.on("error", () => done({ ok: false, code: null }));
+  });
 }
 
 function renderConfig(config: FirthConfig): string {

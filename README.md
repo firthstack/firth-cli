@@ -50,9 +50,42 @@ firth init my-app --yes
 # non-interactive with explicit overrides
 firth init my-app --frontend=nextjs --backend=hono --db=neon \
   --frontend-host=vercel --backend-host=railway --yes
+
+# scaffold only — skip skill + CLI installs (for offline / CI)
+firth init my-app --yes --skip-install
 ```
 
 Defaults (when `--yes` is passed): Next.js + Hono + Neon Postgres + Vercel + Railway.
+
+### Skills + CLIs installed for you
+
+After writing `firth.config.ts` / `firth.lock.json`, `firth init` shells out to install
+the host-specific agent skills and CLIs implied by your stack. These let your
+coding agent (Claude Code, etc.) work the deploy targets natively.
+
+If `frontendHost = vercel`:
+
+```
+npx skills add vercel-labs/next-skills --skill next-best-practices \
+  --skill next-cache-components --skill next-upgrade
+npx skills add vercel/vercel --skill vercel-cli
+npx skills add vercel-labs/agent-skills --skill vercel-deploy
+npx skills add vercel-labs/autoship --skill autoship
+npm i -g vercel
+```
+
+If `backendHost = railway`:
+
+```
+npx skills add railwayapp/railway-skills
+npm i -g @railway/cli
+```
+
+In interactive mode you'll be asked to confirm before any of these run. With
+`--yes` they run automatically. Pass `--skip-install` to suppress them entirely;
+the commands are still printed in the next-steps so you can run them by hand.
+`npm i -g …` may need `sudo` on system Node installs — failures are surfaced
+but do not abort `firth init`.
 
 ## Commands (planned)
 
