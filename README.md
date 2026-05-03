@@ -1,12 +1,12 @@
 # firth-cli
 
-> The runtime CLI for [Firth](https://github.com/firthdev/firth) — the cloud platform SDK for AI coding agents.
+> The runtime CLI for [Firth](https://github.com/firthstack/firth) — the cloud platform SDK for AI coding agents.
 
 **Status:** Pre-alpha. v0.0.1 ships only `firth init` (project scaffolding).
 
-This repo is the **L2 / CLI layer** of the Firth project. The companion repo [`firth`](https://github.com/firthdev/firth) holds the L1 / Knowledge layer (Skills, templates, runbooks, ARCHITECTURE.md).
+This repo is the **L2 / CLI layer** of the Firth project. The companion repo [`firth`](https://github.com/firthstack/firth) holds the L1 / Knowledge layer (Skills, templates, runbooks, ARCHITECTURE.md).
 
-For the project's overall design and rationale, see [`firth/ARCHITECTURE.md`](https://github.com/firthdev/firth/blob/main/ARCHITECTURE.md). This README is just for the CLI itself.
+For the project's overall design and rationale, see [`firth/ARCHITECTURE.md`](https://github.com/firthstack/firth/blob/main/ARCHITECTURE.md). This README is just for the CLI itself.
 
 ## Local development
 

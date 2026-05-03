@@ -48,7 +48,8 @@ export const initCommand = defineCommand({
     },
     db: {
       type: "string",
-      description: "Database provider override (neon | none)",
+      description:
+        "Database provider override (neon | railway-postgres | none)",
     },
     "frontend-host": {
       type: "string",
@@ -180,6 +181,7 @@ async function promptStack(
       message: "Database?",
       options: [
         { value: "neon", label: "Neon Postgres" },
+        { value: "railway-postgres", label: "Railway Postgres" },
         { value: "none", label: "None" },
       ],
       initialValue: "neon",
@@ -294,7 +296,9 @@ export function buildInstallCommands(
     );
   }
 
-  if (stack.backendHost === "railway") {
+  const needsRailway =
+    stack.backendHost === "railway" || stack.db === "railway-postgres";
+  if (needsRailway) {
     cmds.push(
       {
         cmd: "npx",
@@ -372,7 +376,7 @@ function runCmd(
   });
 }
 
-function renderConfig(config: FirthConfig): string {
+export function renderConfig(config: FirthConfig): string {
   // For v0.0.1 we emit a plain default-export object so the project doesn't
   // need to install `firth` as a dev dep yet. Once we ship a typed
   // `defineConfig` helper, switch this to import-based output.

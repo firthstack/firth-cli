@@ -10,7 +10,7 @@
 
 export type FrontendFramework = "nextjs";
 export type BackendFramework = "hono" | "express" | "none";
-export type DbProvider = "neon" | "none";
+export type DbProvider = "neon" | "railway-postgres" | "none";
 export type FrontendHost = "vercel" | "none";
 export type BackendHost = "railway" | "none";
 
