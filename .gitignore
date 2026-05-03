@@ -7,6 +7,16 @@ coverage
 .env.local
 .env.*.local
 
+.agents/*
+.claude/*
+
+# firth config
+firth.config.ts
+firth.lock.json
+
+# skills lock
+skills-lock.json
+
 # Logs
 *.log
 npm-debug.log*
